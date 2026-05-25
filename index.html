@@ -352,8 +352,8 @@ textarea { resize: vertical; min-height: 60px; }
           <input type="text" id="storyName" placeholder="Peter Rabbit" oninput="updatePreview()">
         </div>
       </div>
-      <label id="labelStorySummary">一句话梗概 <span class="hint">· 仅供家长参考，不作为小朋友的复述标准</span></label>
-      <input type="text" id="storySummary" placeholder="小兔子Peter不听妈妈的话，偷偷溜进菜园，被追赶丢了衣服，最后好不容易逃回家。" oninput="updatePreview()">
+      <label id="labelStorySummary">中文梗概 <span class="hint">· 仅供家长参考，不作为小朋友的复述标准</span></label>
+      <textarea id="storySummary" placeholder="贴入中文故事梗概，会显示在卡片上供家长参考..." oninput="updatePreview()" style="min-height: 80px;"></textarea>
     </div>
 
     <!-- Chinese Summary Parser -->
@@ -438,7 +438,7 @@ function switchType(type) {
   document.getElementById('labelStoryName').textContent = type === 'story' ? '故事名' : '主题';
   document.getElementById('labelStorySummary').innerHTML =
     type === 'story'
-      ? '一句话梗概 <span class="hint">· 仅供家长参考，不作为小朋友的复述标准</span>'
+      ? '中文梗概 <span class="hint">· 仅供家长参考，不作为小朋友的复述标准</span>'
       : '主题简介 <span class="hint">· 今天练习的核心句型或主题</span>';
   document.getElementById('labelSceneSection').innerHTML =
     type === 'story'
@@ -456,7 +456,7 @@ function switchType(type) {
 // ========== DEFAULT DATA ==========
 function initDefaultScenes() {
   document.getElementById('storyName').value = 'Peter Rabbit';
-  document.getElementById('storySummary').value = '小兔子Peter不听妈妈的话，偷偷溜进菜园，被追赶丢了衣服，最后好不容易逃回家。';
+  document.getElementById('storySummary').value = '小兔子Peter不听妈妈的话，偷偷溜进菜园，被追赶丢了衣服，最后好不容易逃回家。妈妈给他做了菊花茶，让他躺在床上休息。';
 
   scenes = [
     { image: null, cue: 'Peter偷偷溜进了麦格雷戈先生的菜园...' },
@@ -794,7 +794,7 @@ function updatePreview() {
     const noteText = cardType === 'story'
       ? '（仅供家长参考，不作为小朋友的复述标准）'
       : '（了解今天练的是什么句型即可）';
-    summaryHTML = `<div class="card-summary">${escHtml(summary)}</div><div style="font-size:10px;color:var(--text-tertiary);margin-top:2px;">${noteText}</div>`;
+    summaryHTML = `<div class="card-summary">${escHtml(summary)}</div><div style="font-size:12px;color:var(--text-tertiary);margin-top:6px;font-weight:500;">${noteText}</div>`;
   }
 
   container.innerHTML = `
