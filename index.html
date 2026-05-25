@@ -513,7 +513,17 @@ function handleImageUpload(idx, event) {
 function removeImage(idx) { scenes[idx].image = null; renderSceneList(); }
 function updateSceneCue(idx, value) { scenes[idx].cue = value; updatePreview(); }
 function addScene(cueText) { scenes.push({ image: null, cue: cueText || '' }); renderSceneList(); }
-function removeScene(idx) { scenes.splice(idx, 1); renderSceneList(); }
+function removeScene(idx) {
+  // Clear the corresponding pdfPage.added if this scene came from a PDF page
+  const removedScene = scenes[idx];
+  if (removedScene._pdfPageNum) {
+    const page = pdfPages.find(p => p.pageNum === removedScene._pdfPageNum);
+    if (page) page.added = false;
+  }
+  scenes.splice(idx, 1);
+  renderSceneList();
+  renderPdfThumbnails();
+}
 
 // ========== SUMMARY PARSING ==========
 function parseSummary() {
@@ -614,7 +624,7 @@ function addPdfPageAsScene(idx) {
   const page = pdfPages[idx];
   if (page.added) return;
 
-  scenes.push({ image: page.dataURL, cue: '' });
+  scenes.push({ image: page.dataURL, cue: '', _pdfPageNum: page.pageNum });
   page.added = true;
 
   // Update thumbnail display
