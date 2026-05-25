@@ -189,6 +189,12 @@ textarea { resize: vertical; min-height: 60px; }
 .parse-sentence:hover { border-color: var(--accent); }
 .parse-sentence.used { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
 .parse-sentence .sent-icon { font-size: 11px; flex-shrink: 0; }
+.parse-sentence .sent-copy {
+  margin-left: auto; font-size: 10px; color: var(--accent);
+  padding: 2px 6px; border-radius: 3px; border: 1px solid transparent;
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+}
+.parse-sentence .sent-copy:hover { background: var(--accent-light); border-color: var(--accent); }
 
 /* PDF upload */
 .pdf-thumb-grid {
@@ -523,6 +529,7 @@ function removeScene(idx) {
   scenes.splice(idx, 1);
   renderSceneList();
   renderPdfThumbnails();
+  if (parsedSentences.length > 0) parseSummary();
 }
 
 // ========== SUMMARY PARSING ==========
@@ -539,9 +546,10 @@ function parseSummary() {
   let html = '<div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;">点击句子添加到场景列表：</div>';
   parsedSentences.forEach((s, i) => {
     const isUsed = scenes.some(sc => sc.cue === s);
-    html += `<div class="parse-sentence ${isUsed ? 'used' : ''}" onclick="addSentenceAsScene(${i})">
-      <span class="sent-icon">${isUsed ? '✓' : '+'}</span>
-      <span>${s}</span>
+    html += `<div class="parse-sentence ${isUsed ? 'used' : ''}">
+      <span class="sent-icon" onclick="addSentenceAsScene(${i})">${isUsed ? '✓' : '+'}</span>
+      <span onclick="addSentenceAsScene(${i})">${s}</span>
+      <span class="sent-copy" onclick="copySentence(${i}, event)" title="复制到剪贴板">复制</span>
     </div>`;
   });
   container.innerHTML = html;
@@ -551,9 +559,44 @@ function addSentenceAsScene(idx) {
   const sentence = parsedSentences[idx];
   const exists = scenes.some(s => s.cue === sentence);
   if (exists) return;
-  scenes.push({ image: null, cue: sentence });
+  scenes.push({ image: null, cue: sentence, _fromSentence: true });
   renderSceneList();
   parseSummary();
+}
+
+function copySentence(idx, event) {
+  event.stopPropagation();
+  const sentence = parsedSentences[idx];
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(sentence).then(() => {
+      showCopyToast('已复制');
+    }).catch(() => {
+      fallbackCopy(sentence);
+    });
+  } else {
+    fallbackCopy(sentence);
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); showCopyToast('已复制'); }
+  catch (e) { showCopyToast('复制失败'); }
+  document.body.removeChild(ta);
+}
+
+function showCopyToast(msg) {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:6px 14px;border-radius:4px;font-size:12px;z-index:9999;opacity:0;transition:opacity 0.2s;';
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.style.opacity = '1');
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 1200);
 }
 
 // ========== PDF UPLOAD ==========
