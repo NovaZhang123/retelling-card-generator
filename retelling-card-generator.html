@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>引导复述卡生成器</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #f8f7f4;
+  --card-bg: #ffffff;
+  --border: #e4e2dc;
+  --text: #2c2c2a;
+  --text-secondary: #6b6b67;
+  --text-tertiary: #9a9a95;
+  --accent: #534ab7;
+  --accent-light: #eeedfe;
+  --accent2: #1d7a9e;
+  --accent2-light: #e1f2f5;
+  --danger: #d85a30;
+  --danger-light: #faece7;
+  --success: #1d9e75;
+  --success-light: #e1f5ee;
+  --warning: #ba7517;
+  --warning-light: #faeeda;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+
+.header { text-align: center; margin-bottom: 24px; }
+.header h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+.header p { font-size: 13px; color: var(--text-secondary); }
+
+.main-layout { display: grid; grid-template-columns: 420px 1fr; gap: 24px; align-items: start; }
+
+/* Type Toggle */
+.type-toggle {
+  display: flex; gap: 0; border-radius: var(--radius-sm);
+  overflow: hidden; border: 1px solid var(--border);
+}
+.type-toggle-btn {
+  flex: 1; padding: 8px 0; border: none; background: var(--card-bg);
+  font-size: 13px; font-family: inherit; cursor: pointer; color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.type-toggle-btn:first-child { border-right: 1px solid var(--border); }
+.type-toggle-btn.active {
+  background: var(--accent); color: #fff; font-weight: 500;
+}
+.type-toggle-btn:not(.active):hover { background: var(--bg); }
+
+/* Form Panel */
+.form-panel {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.form-section {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.form-section:last-child { border-bottom: none; }
+
+.section-label {
+  font-size: 11px; font-weight: 500; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+}
+.section-label .hint { text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+label {
+  display: block; font-size: 12px; font-weight: 500; margin-bottom: 3px;
+}
+label .hint { font-weight: 400; color: var(--text-tertiary); font-size: 11px; }
+
+input[type="text"], textarea {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px; font-family: inherit;
+  color: var(--text); background: var(--card-bg); margin-bottom: 8px;
+}
+input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 60px; }
+
+.form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.form-row > * { flex: 1; margin-bottom: 0; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: var(--radius-sm); font-size: 12px;
+  font-weight: 500; font-family: inherit; cursor: pointer;
+  border: 1px solid var(--border); background: var(--card-bg); color: var(--text);
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--text-secondary); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { opacity: 0.9; }
+.btn-sm { padding: 4px 9px; font-size: 11px; }
+.btn-ghost { border: none; background: none; padding: 4px 6px; color: var(--text-tertiary); }
+.btn-ghost:hover { color: var(--danger); }
+
+/* Scene item */
+.scene-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--bg); border-radius: var(--radius-sm); padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.scene-num {
+  font-size: 11px; font-weight: 500; color: var(--text-tertiary);
+  min-width: 20px; padding-top: 8px; text-align: center;
+}
+.scene-body { flex: 1; }
+
+.scene-img-zone {
+  width: 100%; height: 48px; border-radius: 4px;
+  border: 1px dashed var(--border); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text-tertiary); margin-bottom: 6px;
+  overflow: hidden; position: relative; background: var(--card-bg);
+  transition: border-color 0.15s;
+}
+.scene-img-zone:hover { border-color: var(--accent); }
+.scene-img-zone.has-img { border-style: solid; }
+.scene-img-zone img {
+  width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;
+}
+.scene-img-zone .placeholder-text { position: relative; z-index: 1; }
+.scene-img-zone.has-img .placeholder-text { display: none; }
+.scene-img-zone .remove-img {
+  position: absolute; top: 2px; right: 2px; z-index: 2;
+  width: 18px; height: 18px; border-radius: 50%; background: rgba(0,0,0,0.5);
+  color: #fff; font-size: 10px; line-height: 18px; text-align: center;
+  cursor: pointer; display: none;
+}
+.scene-img-zone.has-img:hover .remove-img { display: block; }
+
+.scene-cue {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: 4px; font-size: 12px; font-family: inherit;
+  color: var(--text); background: var(--card-bg);
+  margin-bottom: 0;
+}
+.scene-cue:focus { outline: none; border-color: var(--accent); }
+
+.add-scene-btn {
+  font-size: 12px; color: var(--accent); cursor: pointer;
+  padding: 6px 0; display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: none; font-family: inherit;
+}
+.add-scene-btn:hover { opacity: 0.8; }
+
+/* Prompt item */
+.prompt-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: var(--bg); border-radius: var(--radius-sm); padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.prompt-num {
+  font-size: 11px; font-weight: 500; color: var(--accent);
+  min-width: 20px; padding-top: 7px; text-align: center;
+}
+.prompt-body { flex: 1; }
+.prompt-input {
+  width: 100%; padding: 6px 8px; border: 1px solid var(--border);
+  border-radius: 4px; font-size: 12px; font-family: inherit;
+  color: var(--text); background: var(--card-bg);
+}
+.prompt-input:focus { outline: none; border-color: var(--accent); }
+
+/* Summary parsing */
+.parse-sentence {
+  padding: 6px 10px; border-radius: 4px; border: 1px solid var(--border);
+  font-size: 12px; cursor: pointer; margin-bottom: 4px; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.parse-sentence:hover { border-color: var(--accent); }
+.parse-sentence.used { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.parse-sentence .sent-icon { font-size: 11px; flex-shrink: 0; }
+
+/* PDF upload */
+.pdf-thumb-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px; margin-top: 8px;
+}
+.pdf-thumb {
+  border: 1px solid var(--border); border-radius: 4px;
+  overflow: hidden; cursor: pointer; transition: all 0.15s;
+  position: relative; background: var(--bg);
+}
+.pdf-thumb:hover { border-color: var(--accent); transform: scale(1.03); }
+.pdf-thumb.used { border-color: var(--accent); opacity: 0.5; pointer-events: none; }
+.pdf-thumb canvas { width: 100%; display: block; }
+.pdf-thumb .thumb-label {
+  font-size: 10px; color: var(--text-tertiary); text-align: center;
+  padding: 3px 0; background: var(--card-bg);
+}
+.pdf-thumb .thumb-check {
+  position: absolute; top: 3px; right: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 10px;
+  display: flex; align-items: center; justify-content: center;
+  display: none;
+}
+.pdf-thumb.used .thumb-check { display: flex; }
+.pdf-loading { font-size: 12px; color: var(--text-tertiary); padding: 12px 0; text-align: center; }
+
+/* PDF drop zone */
+.pdf-drop-zone {
+  width: 100%; padding: 12px; border: 1px dashed var(--border);
+  border-radius: var(--radius-sm); text-align: center;
+  font-size: 12px; color: var(--text-tertiary); cursor: pointer;
+  transition: border-color 0.15s; background: var(--bg);
+}
+.pdf-drop-zone:hover { border-color: var(--accent); }
+.pdf-drop-zone .pdf-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+/* Preview */
+.preview-panel { position: sticky; top: 20px; }
+.preview-toolbar {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+}
+.preview-toolbar h3 { font-size: 14px; font-weight: 500; color: var(--text-secondary); }
+
+.card-preview {
+  background: var(--card-bg); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+  width: 100%; max-width: 480px; margin: 0 auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.card-sec { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.card-sec:last-child { border-bottom: none; }
+
+.card-badge {
+  font-size: 10px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+}
+.card-title { font-size: 17px; font-weight: 500; }
+.card-summary { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.7; }
+
+.card-sec-label {
+  font-size: 10px; color: var(--text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+}
+
+/* Scene in card */
+.card-scene {
+  display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px;
+}
+.card-scene:last-child { margin-bottom: 0; }
+.card-scene-img {
+  width: 72px; height: 54px; flex-shrink: 0; border-radius: 5px;
+  overflow: hidden; background: var(--bg); border: 1px solid var(--border);
+}
+.card-scene-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-scene-img.placeholder {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text-tertiary);
+}
+.card-scene.single-cover .card-scene-img {
+  width: 100%; height: auto; aspect-ratio: 4/3;
+}
+.card-scene.single-cover .card-scene-cue {
+  font-size: 13px;
+}
+.card-scene-cue {
+  flex: 1; padding-top: 2px; font-size: 12px; color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Prompts */
+.card-prompt {
+  display: flex; align-items: flex-start; gap: 5px;
+  font-size: 12px; color: var(--text); margin-bottom: 5px;
+}
+.card-prompt .pn { color: var(--accent); flex-shrink: 0; font-weight: 500; }
+
+/* Reminder */
+.card-reminder {
+  background: var(--accent-light); border-radius: 6px;
+  padding: 10px 14px; font-size: 12px; color: var(--accent);
+  line-height: 1.6; margin-bottom: 0;
+}
+.card-reminder .remind-icon { font-size: 14px; margin-right: 4px; }
+
+/* Tips */
+.card-tip {
+  font-size: 11px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 5px;
+}
+.card-tip:last-child { margin-bottom: 0; }
+.card-tip strong { color: var(--text); font-weight: 500; }
+
+.empty-state {
+  text-align: center; padding: 60px 20px;
+  color: var(--text-tertiary); font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .main-layout { grid-template-columns: 1fr; }
+  .preview-panel { position: static; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<div class="header">
+  <h1>引导复述卡生成器</h1>
+  <p>粘贴故事梗概 / 上传PDF课件 → 自动拆分场景 → 可选拖入截图 → 10分钟内发布</p>
+</div>
+
+<div class="main-layout">
+
+  <!-- === FORM PANEL === -->
+  <div class="form-panel" id="formPanel">
+
+    <!-- Type Toggle -->
+    <div class="form-section">
+      <div class="section-label">卡片类型</div>
+      <div class="type-toggle">
+        <button class="type-toggle-btn active" id="btnStory" onclick="switchType('story')">故事绘本</button>
+        <button class="type-toggle-btn" id="btnPicture" onclick="switchType('picture')">散图 / 句型练习</button>
+      </div>
+    </div>
+
+    <!-- Story Info -->
+    <div class="form-section">
+      <div class="section-label">基本信息</div>
+      <div class="form-row">
+        <div>
+          <label id="labelStoryName">故事名 / 主题</label>
+          <input type="text" id="storyName" placeholder="Peter Rabbit" oninput="updatePreview()">
+        </div>
+      </div>
+      <label id="labelStorySummary">一句话梗概 <span class="hint">· 仅供家长参考，不作为小朋友的复述标准</span></label>
+      <input type="text" id="storySummary" placeholder="小兔子Peter不听妈妈的话，偷偷溜进菜园，被追赶丢了衣服，最后好不容易逃回家。" oninput="updatePreview()">
+    </div>
+
+    <!-- Chinese Summary Parser -->
+    <div class="form-section" id="sectionSummaryParser">
+      <div class="section-label">中文梗概 · 点击句子添加场景</div>
+      <label>粘贴故事中文梗概 <span class="hint">· 有的话贴这里，最快</span></label>
+      <textarea id="chineseSummary" placeholder="贴入中文故事梗概，会自动拆成句子。点击句子即可添加为卡片场景..." oninput="parseSummary()"></textarea>
+      <div id="parseResult"></div>
+    </div>
+
+    <!-- PDF Upload -->
+    <div class="form-section">
+      <div class="section-label">PDF课件导入 · 点击页面添加为场景</div>
+      <div class="pdf-drop-zone" onclick="document.getElementById('pdfInput').click()">
+        <span class="pdf-icon">&#128196;</span>
+        点击上传PDF课件，自动拆分页面
+      </div>
+      <input type="file" accept=".pdf" style="display:none" id="pdfInput" onchange="handlePdfUpload(event)">
+      <div id="pdfThumbs"></div>
+    </div>
+
+    <!-- Scenes -->
+    <div class="form-section">
+      <div class="section-label" style="display: flex; justify-content: space-between; align-items: center;">
+        <span id="labelSceneSection">故事画面 <span class="hint">· 来不及截图的话只放一张封面也够</span></span>
+        <button class="add-scene-btn" onclick="addScene()">+ 添加场景</button>
+      </div>
+      <div id="sceneList">
+        <!-- Scenes rendered here -->
+      </div>
+    </div>
+
+    <!-- Prompts -->
+    <div class="form-section">
+      <div class="section-label" style="display: flex; justify-content: space-between; align-items: center;">
+        可以这样和孩子聊
+        <button class="add-scene-btn" onclick="addPrompt()">+ 添加提问</button>
+      </div>
+      <div id="promptList">
+        <!-- Prompts rendered here -->
+      </div>
+    </div>
+
+    <!-- Reminder -->
+    <div class="form-section">
+      <div class="section-label">作业提醒</div>
+      <input type="text" id="reminderText" value="和孩子一起看看图、聊聊这个故事，录个小视频发到群里就可以啦~ 期待听到小朋友的故事！" oninput="updatePreview()">
+    </div>
+
+  </div>
+
+  <!-- === PREVIEW PANEL === -->
+  <div class="preview-panel">
+    <div class="preview-toolbar">
+      <h3>卡片预览</h3>
+      <button class="btn btn-primary" onclick="downloadCard()">下载图片</button>
+    </div>
+    <div id="cardPreviewContainer"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+// ========== PDF.js setup ==========
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ========== STATE ==========
+let cardType = 'story'; // 'story' | 'picture'
+let scenes = []; // { image: dataURL | null, cue: string }
+let prompts = []; // string[]
+let parsedSentences = [];
+let pdfPages = []; // { dataURL, pageNum, added: bool }
+
+// ========== TYPE SWITCHING ==========
+function switchType(type) {
+  cardType = type;
+  document.getElementById('btnStory').classList.toggle('active', type === 'story');
+  document.getElementById('btnPicture').classList.toggle('active', type === 'picture');
+
+  // Update labels
+  document.getElementById('labelStoryName').textContent = type === 'story' ? '故事名' : '主题';
+  document.getElementById('labelStorySummary').innerHTML =
+    type === 'story'
+      ? '一句话梗概 <span class="hint">· 仅供家长参考，不作为小朋友的复述标准</span>'
+      : '主题简介 <span class="hint">· 今天练习的核心句型或主题</span>';
+  document.getElementById('labelSceneSection').innerHTML =
+    type === 'story'
+      ? '故事画面 <span class="hint">· 来不及截图的话只放一张封面也够</span>'
+      : '图片素材 <span class="hint">· 每张图配一句目标句型</span>';
+
+  // Toggle summary parser visibility
+  document.getElementById('sectionSummaryParser').style.display = type === 'story' ? '' : 'none';
+
+  updatePreview();
+  // Re-render scene list to update placeholders
+  renderSceneList();
+}
+
+// ========== DEFAULT DATA ==========
+function initDefaultScenes() {
+  document.getElementById('storyName').value = 'Peter Rabbit';
+  document.getElementById('storySummary').value = '小兔子Peter不听妈妈的话，偷偷溜进菜园，被追赶丢了衣服，最后好不容易逃回家。';
+
+  scenes = [
+    { image: null, cue: 'Peter偷偷溜进了麦格雷戈先生的菜园...' },
+    { image: null, cue: '被发现了！Peter丢了衣服逃跑...' },
+    { image: null, cue: '好不容易逃回家，生病了只能喝菊花茶' }
+  ];
+  prompts = [
+    '这个故事讲了什么呀？',
+    '后来呢？发生了什么？',
+    '最后怎么样了？',
+    '你最喜欢哪个部分？为什么呢？'
+  ];
+  renderSceneList();
+  renderPromptList();
+  updatePreview();
+}
+
+// ========== SCENE LIST RENDERING ==========
+function renderSceneList() {
+  const container = document.getElementById('sceneList');
+  const placeholderText = cardType === 'story' ? '记忆线索...' : '目标句型，如：I can see the ______.';
+
+  if (scenes.length === 0) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-tertiary);padding:8px 0;">还没有场景。点击上方"+ 添加场景"或从中文梗概/PDF页面中添加。</div>';
+    return;
+  }
+
+  container.innerHTML = scenes.map((s, i) => `
+    <div class="scene-item">
+      <div class="scene-num">${i+1}</div>
+      <div class="scene-body">
+        <div class="scene-img-zone ${s.image ? 'has-img' : ''}" onclick="triggerImageUpload(${i})" id="imgZone${i}">
+          ${s.image ? `<img src="${s.image}" alt="场景图">` : ''}
+          <span class="placeholder-text">点击添加截图（可选）</span>
+          ${s.image ? `<span class="remove-img" onclick="event.stopPropagation();removeImage(${i})">&times;</span>` : ''}
+        </div>
+        <input type="file" accept="image/*" style="display:none" id="imgInput${i}" onchange="handleImageUpload(${i}, event)">
+        <input type="text" class="scene-cue" placeholder="${escAttr(placeholderText)}" value="${escAttr(s.cue)}" oninput="updateSceneCue(${i}, this.value)" id="cue${i}">
+        <button class="btn-ghost" onclick="removeScene(${i})" style="font-size:11px;margin-top:2px;" title="删除此场景">删除</button>
+      </div>
+    </div>
+  `).join('');
+
+  updatePreview();
+}
+
+function triggerImageUpload(idx) { document.getElementById('imgInput' + idx).click(); }
+
+function handleImageUpload(idx, event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    scenes[idx].image = e.target.result;
+    renderSceneList();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeImage(idx) { scenes[idx].image = null; renderSceneList(); }
+function updateSceneCue(idx, value) { scenes[idx].cue = value; updatePreview(); }
+function addScene(cueText) { scenes.push({ image: null, cue: cueText || '' }); renderSceneList(); }
+function removeScene(idx) { scenes.splice(idx, 1); renderSceneList(); }
+
+// ========== SUMMARY PARSING ==========
+function parseSummary() {
+  const text = document.getElementById('chineseSummary').value.trim();
+  const container = document.getElementById('parseResult');
+
+  if (!text) { container.innerHTML = ''; parsedSentences = []; return; }
+
+  parsedSentences = text.split(/[。！？；\n]+/).filter(s => s.trim().length > 0);
+
+  if (parsedSentences.length === 0) { container.innerHTML = ''; return; }
+
+  let html = '<div style="font-size:11px;color:var(--text-tertiary);margin-bottom:6px;">点击句子添加到场景列表：</div>';
+  parsedSentences.forEach((s, i) => {
+    const isUsed = scenes.some(sc => sc.cue === s);
+    html += `<div class="parse-sentence ${isUsed ? 'used' : ''}" onclick="addSentenceAsScene(${i})">
+      <span class="sent-icon">${isUsed ? '✓' : '+'}</span>
+      <span>${s}</span>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function addSentenceAsScene(idx) {
+  const sentence = parsedSentences[idx];
+  const exists = scenes.some(s => s.cue === sentence);
+  if (exists) return;
+  scenes.push({ image: null, cue: sentence });
+  renderSceneList();
+  parseSummary();
+}
+
+// ========== PDF UPLOAD ==========
+async function handlePdfUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const thumbsDiv = document.getElementById('pdfThumbs');
+  thumbsDiv.innerHTML = '<div class="pdf-loading">正在解析 "' + escHtml(file.name) + '" ...</div>';
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    pdfPages = [];
+
+    // Render each page
+    const renderPromises = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      renderPromises.push((async (pageNum) => {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale: 0.5 }); // thumbnail scale
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext('2d');
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        pdfPages.push({ dataURL: canvas.toDataURL('image/jpeg', 0.7), pageNum, added: false });
+      })(i));
+    }
+
+    await Promise.all(renderPromises);
+    pdfPages.sort((a, b) => a.pageNum - b.pageNum);
+
+    // Render thumbnails
+    thumbsDiv.innerHTML = '<div style="font-size:11px;color:var(--text-tertiary);margin-bottom:8px;">点击页面添加到场景（共 ' + pdfPages.length + ' 页）：</div>';
+    thumbsDiv.innerHTML += '<div class="pdf-thumb-grid">' +
+      pdfPages.map((p, i) =>
+        `<div class="pdf-thumb" id="pdfThumb${i}" onclick="addPdfPageAsScene(${i})">
+          <div class="thumb-check">&#10003;</div>
+          <canvas></canvas>
+          <div class="thumb-label">第 ${p.pageNum} 页</div>
+        </div>`
+      ).join('') +
+    '</div>';
+
+    // Draw canvases after DOM insertion
+    setTimeout(() => {
+      pdfPages.forEach((p, i) => {
+        const thumbEl = document.querySelector('#pdfThumb' + i + ' canvas');
+        if (thumbEl) {
+          const img = new Image();
+          img.onload = () => {
+            thumbEl.width = img.width / 2;
+            thumbEl.height = img.height / 2;
+            thumbEl.getContext('2d').drawImage(img, 0, 0, thumbEl.width, thumbEl.height);
+          };
+          img.src = p.dataURL;
+        }
+      });
+    }, 100);
+
+  } catch (err) {
+    thumbsDiv.innerHTML = '<div style="font-size:12px;color:var(--danger);padding:8px 0;">解析失败：' + escHtml(err.message) + '</div>';
+  }
+}
+
+function addPdfPageAsScene(idx) {
+  const page = pdfPages[idx];
+  if (page.added) return;
+
+  scenes.push({ image: page.dataURL, cue: '' });
+  page.added = true;
+
+  // Update thumbnail display
+  const thumbEl = document.getElementById('pdfThumb' + idx);
+  if (thumbEl) thumbEl.classList.add('used');
+
+  renderSceneList();
+}
+
+// ========== PROMPT LIST ==========
+function renderPromptList() {
+  const container = document.getElementById('promptList');
+  if (prompts.length === 0) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--text-tertiary);padding:8px 0;">还没有提问。点击上方"+ 添加提问"来添加。</div>';
+    return;
+  }
+  container.innerHTML = prompts.map((p, i) => `
+    <div class="prompt-item">
+      <div class="prompt-num">${i + 1}.</div>
+      <div class="prompt-body">
+        <input type="text" class="prompt-input" value="${escAttr(p)}"
+          oninput="updatePrompt(${i}, this.value)" id="prompt${i}">
+        <button class="btn-ghost" onclick="removePrompt(${i})" style="font-size:11px;margin-top:2px;" title="删除此提问">删除</button>
+      </div>
+    </div>
+  `).join('');
+  updatePreview();
+}
+
+function updatePrompt(idx, value) { prompts[idx] = value; updatePreview(); }
+function addPrompt() { prompts.push(''); renderPromptList(); }
+function removePrompt(idx) { prompts.splice(idx, 1); renderPromptList(); }
+
+// ========== DATA GATHERING ==========
+function getStoryName() { return document.getElementById('storyName').value.trim(); }
+function getStorySummary() { return document.getElementById('storySummary').value.trim(); }
+
+function getPrompts() {
+  const valid = prompts.filter(p => p.trim());
+  if (valid.length > 0) return valid;
+
+  // Auto-generate based on type
+  if (cardType === 'picture') {
+    return [
+      '这张图里有什么呀？你看到了什么？',
+      '他在干什么呢？',
+      '你能用我们今天学的句子说一说吗？',
+      '还有别的发现吗？'
+    ];
+  }
+
+  const hasScenes = scenes.filter(s => s.cue.trim()).length > 0;
+  if (!hasScenes) {
+    return [
+      '这个故事讲了什么呀？你还记得吗？',
+      '后来呢？发生了什么？',
+      '最后怎么样了？',
+      '你最喜欢哪个部分？为什么呢？'
+    ];
+  }
+  const fallback = ['这个故事讲了什么呀？'];
+  if (scenes.length >= 2) fallback.push('后来呢？发生了什么？');
+  if (scenes.length >= 3) fallback.push('然后呢？');
+  fallback.push('最后怎么样了？');
+  fallback.push('你最喜欢哪个部分？为什么呢？');
+  return fallback;
+}
+
+function getReminderText() { return document.getElementById('reminderText').value.trim(); }
+
+function getCardBadge() {
+  return cardType === 'story' ? '今日复述小任务' : '今日句型小练习';
+}
+
+// ========== CARD RENDERING ==========
+function updatePreview() {
+  const container = document.getElementById('cardPreviewContainer');
+  const name = getStoryName();
+  const summary = getStorySummary();
+  const promptsList = getPrompts();
+  const reminder = getReminderText();
+  const badge = getCardBadge();
+
+  if (!name && scenes.length === 0) {
+    container.innerHTML = `<div class="card-preview"><div class="empty-state">填写故事名/主题并添加至少一个场景<br>卡片预览会出现在这里</div></div>`;
+    return;
+  }
+
+  const validScenes = scenes.filter(s => s.cue.trim());
+
+  // Scenes HTML
+  let scenesHTML = '';
+  const isSingleCover = validScenes.length === 1 && validScenes[0].image;
+  if (validScenes.length > 0) {
+    scenesHTML = validScenes.map(s => {
+      const imgHTML = s.image
+        ? `<div class="card-scene-img"><img src="${s.image}" alt=""></div>`
+        : `<div class="card-scene-img placeholder">图片</div>`;
+      const cls = isSingleCover ? ' card-scene single-cover' : ' card-scene';
+      return `<div class="${cls}">${imgHTML}<div class="card-scene-cue">${escHtml(s.cue)}</div></div>`;
+    }).join('');
+  }
+
+  // Prompts HTML
+  const promptsHTML = promptsList.map((p, i) => `
+    <div class="card-prompt">
+      <span class="pn">${i+1}.</span>
+      <span>${escHtml(p)}</span>
+    </div>
+  `).join('');
+
+  // Tips based on type
+  const tipsHTML = cardType === 'story'
+    ? `<div class="card-tip"><strong>中英夹杂完全OK</strong> — 重点是孩子用自己的话把故事讲完整</div>
+       <div class="card-tip"><strong>指着图问</strong> — 卡住了就指着上面的图："这个是谁？""他在干什么？"</div>
+       <div class="card-tip"><strong>哪怕只讲出一个画面也很棒</strong> — 先讲出一张图，再慢慢串起来</div>`
+    : `<div class="card-tip"><strong>指着图问</strong> — "这是什么？""他在干什么？""你能用Which one is ... 说说看吗？"</div>
+       <div class="card-tip"><strong>中英夹杂完全OK</strong> — 重点是孩子敢开口说</div>
+       <div class="card-tip"><strong>不用一次全讲完</strong> — 哪怕只练熟一个句型也很棒</div>`;
+
+  // Summary with note
+  let summaryHTML = '';
+  if (summary) {
+    const noteText = cardType === 'story'
+      ? '（仅供家长参考，不作为小朋友的复述标准）'
+      : '（了解今天练的是什么句型即可）';
+    summaryHTML = `<div class="card-summary">${escHtml(summary)}</div><div style="font-size:10px;color:var(--text-tertiary);margin-top:2px;">${noteText}</div>`;
+  }
+
+  container.innerHTML = `
+    <div class="card-preview" id="cardExportArea">
+      ${name ? `
+      <div class="card-sec">
+        <div class="card-badge">${badge}</div>
+        <div class="card-title">${escHtml(name)}</div>
+        ${summaryHTML}
+      </div>` : ''}
+
+      ${validScenes.length > 0 ? `
+      <div class="card-sec">
+        <div class="card-sec-label">${validScenes.length === 1 ? '和孩子一起看看这张图' : '和孩子一起看看这些图'}</div>
+        ${scenesHTML}
+      </div>` : ''}
+
+      ${promptsList.length > 0 ? `
+      <div class="card-sec">
+        <div class="card-sec-label">可以这样和孩子聊</div>
+        ${promptsHTML}
+      </div>` : ''}
+
+      ${reminder ? `
+      <div class="card-sec">
+        <div class="card-reminder">
+          <span class="remind-icon">&#9997;</span>${escHtml(reminder)}
+        </div>
+      </div>` : ''}
+
+      <div class="card-sec" style="background:#fafaf8;">
+        <div style="font-size:11px;color:var(--text-secondary);line-height:1.8;">
+          ${tipsHTML}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escAttr(str) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ========== EXPORT ==========
+async function downloadCard() {
+  const cardEl = document.getElementById('cardExportArea');
+  if (!cardEl) return;
+
+  const name = getStoryName() || 'retelling-card';
+  const filename = name.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_') + '.png';
+
+  try {
+    const canvas = await html2canvas(cardEl, {
+      scale: 2,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
+
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } catch (err) {
+    alert('导出失败，请尝试截图：' + err.message);
+  }
+}
+
+// ========== INIT ==========
+initDefaultScenes();
+</script>
+
+</body>
+</html>
